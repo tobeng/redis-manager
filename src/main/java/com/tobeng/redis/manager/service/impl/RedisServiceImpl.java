@@ -44,7 +44,7 @@ public class RedisServiceImpl implements RedisService {
         Set<String> keys = stringRedisTemplate.keys("*");
         KeyTreeVO keyTreeVO = new KeyTreeVO(host + JOIN_SYMBOL + port, KeyTypeEnum.REDIS_DB.getCode());
         if (keys == null || keys.isEmpty()) {
-            return keyTreeVO;
+            return Arrays.asList(keyTreeVO);
         }
         for (String key : keys) {
             if (!key.contains(JOIN_SYMBOL)) {
@@ -54,7 +54,7 @@ public class RedisServiceImpl implements RedisService {
             }
             dispose(keyTreeVO.getChildren(), key.split(JOIN_SYMBOL), 0, key);
         }
-        return keyTreeVO;
+        return Arrays.asList(keyTreeVO);
     }
 
     @Override
@@ -69,35 +69,49 @@ public class RedisServiceImpl implements RedisService {
         }
         DataCacheVO dataCacheVO = new DataCacheVO();
         dataCacheVO.setDateType(dataType.code());
-        Object o = stringRedisTemplate.opsForValue().get(dataType.code());
-        Long expire = stringRedisTemplate.getExpire(key, TimeUnit.SECONDS);
-        dataCacheVO.setExpire(expire);
-        if(o == null){
-            return dataCacheVO;
-        }
         switch (dataType.code()) {
             case "string":
-                dataCacheVO.setCacheString(o.toString());
+                Object objectString = stringRedisTemplate.opsForValue().get(key);
+                if(objectString != null){
+                    dataCacheVO.setCacheString(objectString.toString());
+                }
                 break;
             case "list":
-                List<Object> list = JSONObject.toJavaObject((JSONObject) JSON.toJSON(o), List.class);
-                dataCacheVO.setCacheList(list);
+                Long listSize = stringRedisTemplate.opsForList().size(key);
+                if(listSize == null || listSize <= 0){
+                    break;
+                }
+                List<String> range = stringRedisTemplate.opsForList().range(key, 0, listSize);
+                if(range != null){
+                    dataCacheVO.setCacheList(range);
+                }
                 break;
             case "set":
-                Set<Object> set = JSONObject.toJavaObject((JSONObject) JSON.toJSON(o), Set.class);
-                dataCacheVO.setCacheSet(set);
+                Set<String> set = stringRedisTemplate.opsForSet().members(key);
+                if(set != null){
+                    dataCacheVO.setCacheSet(set);
+                }
                 break;
             case "zset":
-                Set<Object> zset = JSONObject.toJavaObject((JSONObject) JSON.toJSON(o), Set.class);
-                dataCacheVO.setCacheZSet(zset);
+                Long zsetSize = stringRedisTemplate.opsForZSet().size(key);
+                if(zsetSize == null || zsetSize <= 0){
+                    break;
+                }
+                Set<String> zset= stringRedisTemplate.opsForZSet().range(key, 0, zsetSize);
+                if(zset != null){
+                    dataCacheVO.setCacheZSet(zset);
+                }
                 break;
             case "hash":
-                Map<Object, Object> map = JSONObject.toJavaObject((JSONObject) JSON.toJSON(o), Map.class);
-                dataCacheVO.setCacheMap(map);
+                Map<Object, Object> objectMap = stringRedisTemplate.opsForHash().entries(key);
+                if(objectMap != null){
+                    dataCacheVO.setCacheMap(objectMap);
+                }
                 break;
             default:
-                dataCacheVO.setCacheNone(o);
         }
+        Long expire = stringRedisTemplate.getExpire(key, TimeUnit.SECONDS);
+        dataCacheVO.setExpire(expire);
         return dataCacheVO;
     }
 

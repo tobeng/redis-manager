@@ -20,11 +20,11 @@ public class DataCacheVO {
 
     private Long expire;
 
-    private List<Object> cacheList;
+    private List<String> cacheList;
 
-    private Set<Object> cacheSet;
+    private Set<String> cacheSet;
 
-    private Set<Object> cacheZSet;
+    private Set<String> cacheZSet;
 
     private Map<Object, Object> cacheMap;
 

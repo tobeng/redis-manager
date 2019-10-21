@@ -13,6 +13,7 @@ import java.util.List;
  * @date 2019/09/13
  * @since 1.0.0
  */
+@CrossOrigin
 @RestController
 @RequestMapping("redis")
 public class RedisController {
